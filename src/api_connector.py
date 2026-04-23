@@ -7,8 +7,6 @@ import os
 
 class APIConnector:
     def __init__(self):
-        #self.OUTPUT_DIR = "data/raw"
-
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(script_dir)  # поднимаемся на уровень выше (из src в корень)
 
@@ -41,7 +39,7 @@ class APIConnector:
                     else:
                         self.logger.info(f"    Вакансии в городе {city_id} не найдены")
 
-                    time.sleep(2)  # Пауза между городами
+                    time.sleep(1)  # Пауза между городами
 
             # Сохраняем все вакансии компании в один файл
                 if all_company_vacancies:
@@ -67,7 +65,7 @@ class APIConnector:
         all_vacancies = []  # Список для вакансий этого города
         try:
             for page in range(pages):
-                print(f"  Страница {page + 1} из {pages}")
+                self.logger.info(f"  Страница {page + 1} из {pages}")
 
                 params = {
                     'employer_id': company,
@@ -95,7 +93,7 @@ class APIConnector:
                     vacancy_id = item['id']
                     self.logger.info(f"    Получаем детали для вакансии {vacancy_id}")
 
-                    detail_response = requests.get(f'https://api.hh.ru/vacancies/{vacancy_id}')
+                    detail_response = requests.get(f'https://api.hh.ru/vacancies/{vacancy_id}', params=params,  headers=header)
 
                     if detail_response.status_code == 200:
                         vacancy_detail = detail_response.json()

@@ -54,7 +54,7 @@ def main():
             percentage = (df[col].sum() / len(df)) * 100
             if percentage > 0:
                 benefit_name = col.replace('benefit_', '')
-                print(f"   {benefit_name}: {percentage:.1f}%")
+                logger.info(f"   {benefit_name}: {percentage:.1f}%")
 
 if __name__ == '__main__':
     main()
