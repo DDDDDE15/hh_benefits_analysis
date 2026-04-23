@@ -2,13 +2,15 @@ import re
 import pandas as pd
 import json
 import os
+import logging
 from typing import List, Dict, Any
 
 
-class DataProcessor:
+class DataParser:
     def __init__(self, raw_data_path: str = "data/raw"):
         self.raw_data_path = raw_data_path
         self.df = None
+        self.logger = logging.getLogger(__name__)
 
         # Словарь с требуемыми бенефитами
         self.REQUIRED_BENEFITS = {
@@ -25,7 +27,7 @@ class DataProcessor:
 
     def load_raw_data(self) -> List[Dict[str, Any]]:
         """Загружает все JSON файлы с вакансиями"""
-        print("📂 Загружаем JSON файлы...")
+        self.logger.info("Загружаем JSON файлы...")
         all_vacancies = []
 
         target_files = ['vacancies_1740.json', 'vacancies_3529.json', 'vacancies_39305.json']
@@ -34,20 +36,20 @@ class DataProcessor:
             filepath = os.path.join(self.raw_data_path, filename)
 
             if not os.path.exists(filepath):
-                print(f"   ⚠️ Файл {filename} не найден, пропускаем")
+                self.logger.info(f"    Файл {filename} не найден, пропускаем")
                 continue
 
             try:
                  with open(filepath, 'r', encoding='utf-8') as f:
                     vacancies = json.load(f)
                     all_vacancies.extend(vacancies)
-                    print(f"   📄 {filename}: {len(all_vacancies)} вакансий")
+                    self.logger.info(f"    {filename}: {len(all_vacancies)} вакансий")
 
             except Exception as e:
-                print(f"   ❌ Ошибка в {filename}: {e}")
+                self.logger.error(f"   Ошибка в {filename}: {e}")
 
 
-        print(f"✅ Всего загружено {len(all_vacancies)} вакансий")
+        self.logger.info(f"Всего загружено {len(all_vacancies)} вакансий")
         return all_vacancies
 
     def extract_vacancy_fields(self, vacancy: Dict[str, Any]) -> Dict[str, Any]:
@@ -89,7 +91,6 @@ class DataProcessor:
             'id': vacancy.get('id'),
             'company': vacancy.get('employer', {}).get('name'),
             'company_id': vacancy.get('employer', {}).get('id'),
-            #'vacancy_name': vacancy.get('name'),
             'professional_role': professional_role,
             'salary_from': salary_from,
             'salary_to': salary_to,
@@ -105,7 +106,7 @@ class DataProcessor:
     def extract_benefits(self, text: str) -> Dict[str, bool]:
         """
         Ищет ключевые слова бенефитов в тексте
-        Возвращает словарь вида: {'benefit_ДМС': True, 'benefit_Обучение': False, ...}
+        Возращает словарь вида: {'benefit_ДМС': True, 'benefit_Обучение': False, ...}
         """
         if not text or not isinstance(text, str):
             return {f"benefit_{name}": False for name in self.REQUIRED_BENEFITS.keys()}
@@ -127,57 +128,13 @@ class DataProcessor:
 
     def create_dataframe(self) -> pd.DataFrame:
         """Создает итоговый датафрейм"""
-        print("\n🚀 Начинаем создание датафрейма...")
+        self.logger.info("\nНачинаем создание датафрейма...")
 
-        # ШАГ 1: Загружаем сырые данные
         raw_data = self.load_raw_data()
-
-        # ШАГ 2: Извлекаем нужные поля
-        print("🔧 Извлекаем нужные поля...")
+        self.logger.info("🔧 Извлекаем нужные поля...")
         processed_data = [self.extract_vacancy_fields(vacancy) for vacancy in raw_data]
 
-        # ШАГ 3: Создаем DataFrame
-        print("📊 Создаем DataFrame...")
+        self.logger.info("Создаем DataFrame...")
         self.df = pd.DataFrame(processed_data)
-        print(f"✅ Готово! Датафрейм с {len(self.df)} вакансиями")
+        self.logger.info(f"Готово! Датафрейм с {len(self.df)} вакансиями")
         return self.df
-
-
-
-
-
-def main():
-    """Точка входа - запускаем весь процесс"""
-    print("🎯 ЗАПУСК ПРОЦЕССОРА ДАННЫХ")
-    processor = DataProcessor(raw_data_path="data/raw")
-
-    df = processor.create_dataframe()
-
-    if len(df) == 0:
-        print("\n❌ Нет данных для анализа. Проверьте папку data/raw")
-        return
-
-    # Сохраняем датафрейм
-    os.makedirs('data/processed', exist_ok=True)
-    output_file = 'data/processed/vacancies_processed.csv'
-    df.to_csv(output_file, index=False, encoding='utf-8-sig')
-
-    print(f"\n📁 Данные сохранены: {output_file}")
-
-    # Краткая статистика
-    print("\n📊 Краткая статистика:")
-    print(f"   Всего вакансий: {len(df)}")
-    print(f"   Компании: {df['company'].value_counts().to_dict()}")
-
-    # Статистика по бенефитам
-    benefit_cols = [col for col in df.columns if col.startswith('benefit_')]
-    if benefit_cols:
-        print("\n🎁 Бенефиты (% вакансий):")
-        for col in benefit_cols:
-            percentage = (df[col].sum() / len(df)) * 100
-            if percentage > 0:
-                benefit_name = col.replace('benefit_', '')
-                print(f"   {benefit_name}: {percentage:.1f}%")
-
-if __name__ == "__main__":
-    main()
