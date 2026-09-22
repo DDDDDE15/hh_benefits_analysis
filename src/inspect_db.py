@@ -24,7 +24,7 @@ if __name__ == '__main__':
         print('\n--- 01_top_cities.sql ---')
         print(run_query(conn, '01_top_cities.sql'))
 
-        print('\n--- 02_top_cities.sql ---')
+        print('\n--- 02_salary_by_experience.sql ---')
         print(run_query(conn, '02_salary_by_experience.sql'))
 
         print('\n--- 03_benefits_share.sql ---')
